@@ -37,23 +37,18 @@ services:
       - ./data:/data
       - /var/www/html:/var/www/html
       - caddy_data/caddy/certificates:/certificates:ro
+      - ${HOME}/.autocert:/root/.autocert
     environment:
       - TZ=Asia/Shanghai
     command: >
       /bin/sh -c "
-      while [ ! -f /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.crt ] || [ ! -f /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.key ]; do
-        echo 'Waiting for Caddy to obtain SSL certificates...';
-        sleep 5;
-      done;
-      echo 'Certificates found, starting ZNS...';
-      ./zns
-      -db /data/zns.db
-      -root /var/www/html
-      -h12 :443
-      -h3 :443
-      -upstream https://doh.pub/dns-query
-      -tls-cert /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.crt
-      -tls-key /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.key
+      if [ -f /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.crt ] && [ -f /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.key ]; then
+        echo 'Using Caddy certificates...';
+        ./zns -free -tls-hosts zns.example.org -root /var/www/html -db /data/zns.db -h12 :443 -h3 :443 -upstream https://doh.pub/dns-query -tls-cert /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.crt -tls-key /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.key;
+      else
+        echo 'Caddy certificates not found, ZNS will manage its own certificates...';
+        ./zns -free -tls-hosts zns.example.org -root /var/www/html -db /data/zns.db -h12 :443 -h3 :443 -upstream https://doh.pub/dns-query;
+      fi
       "
     networks:
       - doh_zns
