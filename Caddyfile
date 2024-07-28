@@ -1,17 +1,11 @@
 zns.example.org {
     encode gzip
 
-    handle /doh* {
-        reverse_proxy zns:443 {
-            transport http {
-                tls
-                tls_insecure_skip_verify
-            }
+    reverse_proxy zns:443 {
+        transport http {
+            tls
+            tls_insecure_skip_verify
         }
-    }
-
-    handle {
-        respond "zns server"
     }
 }
 

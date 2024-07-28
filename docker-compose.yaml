@@ -1,5 +1,9 @@
 version: '3.8'
 
+networks:
+  doh_zns:
+    external: true
+
 services:
   caddy:
     image: blackmini/caddyf
@@ -14,6 +18,14 @@ services:
       - caddy_config:/config
     environment:
       - TZ=Asia/Shanghai
+    networks:
+      - doh_zns
+    healthcheck:
+      test: ["CMD", "caddy", "run", "--config", "/etc/caddy/Caddyfile", "--validate"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   zns:
     image: blackmini/zns
@@ -24,15 +36,30 @@ services:
     volumes:
       - ./data:/data
       - /var/www/html:/var/www/html
+      - caddy_data/caddy/certificates:/certificates:ro
     environment:
       - TZ=Asia/Shanghai
     command: >
+      /bin/sh -c "
+      while [ ! -f /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.crt ] || [ ! -f /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.key ]; do
+        echo 'Waiting for Caddy to obtain SSL certificates...';
+        sleep 5;
+      done;
+      echo 'Certificates found, starting ZNS...';
       ./zns
       -db /data/zns.db
       -root /var/www/html
       -h12 :443
       -h3 :443
       -upstream https://doh.pub/dns-query
+      -tls-cert /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.crt
+      -tls-key /certificates/acme-v02.api.letsencrypt.org-directory/zns.example.org/zns.example.org.key
+      "
+    networks:
+      - doh_zns
+    depends_on:
+      caddy:
+        condition: service_healthy
 
 volumes:
   caddy_data:
