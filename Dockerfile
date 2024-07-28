@@ -41,4 +41,8 @@ RUN mkdir -p /data
 EXPOSE 443
 
 # 运行应用
+<<<<<<< HEAD
 CMD ["./zns", "-db", "/data/zns.db", "-root", "./web"]
+=======
+CMD ["./zns", "-db", "/data/zns.db", "-root", "./web"]
+>>>>>>> ded3956cdf27b1c3def1d513716d5d9856a23891

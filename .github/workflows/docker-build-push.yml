@@ -30,4 +30,8 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/zns:latest
+<<<<<<< HEAD
             ${{ secrets.DOCKERHUB_USERNAME }}/zns:${{ github.sha }}
+=======
+            ${{ secrets.DOCKERHUB_USERNAME }}/zns:${{ github.sha }}
+>>>>>>> ded3956cdf27b1c3def1d513716d5d9856a23891
