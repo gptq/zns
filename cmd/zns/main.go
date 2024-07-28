@@ -22,8 +22,6 @@ var tlsHosts string
 var h12, h3 string
 var upstream string
 var dbPath string
-var price int
-var free bool
 var root string
 
 func listen() (lnH12 net.Listener, lnH3 net.PacketConn, err error) {
@@ -65,13 +63,6 @@ func main() {
 	flag.StringVar(&upstream, "upstream", "https://doh.pub/dns-query", "DoH upstream URL")
 	flag.StringVar(&dbPath, "db", "", "File path of Sqlite database")
 	flag.StringVar(&root, "root", ".", "Root path of static files")
-	flag.IntVar(&price, "price", 1024, "Traffic price MB/Yuan")
-	flag.BoolVar(&free, "free", false, `Whether allow free access.
-If not free, you should set the following environment variables:
-	- ALIPAY_APP_ID
-	- ALIPAY_PRIVATE_KEY
-	- ALIPAY_PUBLIC_KEY
-`)
 
 	flag.Parse()
 
@@ -98,32 +89,17 @@ If not free, you should set the following environment variables:
 		panic(err)
 	}
 
-	var pay zns.Pay
-	var repo zns.TicketRepo
-	if free {
-		repo = zns.FreeTicketRepo{}
-	} else {
-		repo = zns.NewTicketRepo(dbPath)
-		pay = zns.NewPay(
-			os.Getenv("ALIPAY_APP_ID"),
-			os.Getenv("ALIPAY_PRIVATE_KEY"),
-			os.Getenv("ALIPAY_PUBLIC_KEY"),
-		)
-	}
+	repo := zns.FreeTicketRepo{}
 
 	h := &zns.Handler{Upstream: upstream, Repo: repo}
-	th := &zns.TicketHandler{MBpCNY: price, Pay: pay, Repo: repo}
 
 	mux := http.NewServeMux()
 	mux.Handle("/dns/{token}", h)
-	mux.Handle("/ticket/", th)
-	mux.Handle("/ticket/{token}", th)
 	mux.Handle("/", http.FileServer(http.Dir(root)))
 
 	if lnH3 != nil {
 		p := lnH3.LocalAddr().(*net.UDPAddr).Port
 		h.AltSvc = fmt.Sprintf(`h3=":%d"`, p)
-		th.AltSvc = h.AltSvc
 
 		h3 := http3.Server{Handler: mux, TLSConfig: tlsCfg}
 		go h3.Serve(lnH3)
