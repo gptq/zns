@@ -4,6 +4,9 @@ FROM golang:1.22.2-alpine AS builder
 # 设置工作目录
 WORKDIR /app
 
+# 安装构建依赖
+RUN apk add --no-cache gcc musl-dev
+
 # 复制go mod和sum文件
 COPY go.mod go.sum ./
 
@@ -36,11 +39,6 @@ RUN mkdir -p /data
 
 # 暴露端口
 EXPOSE 443
-
-# 设置环境变量（可以在运行时覆盖）
-ENV ALIPAY_APP_ID=""
-ENV ALIPAY_PRIVATE_KEY=""
-ENV ALIPAY_PUBLIC_KEY=""
 
 # 运行应用
 CMD ["./zns", "-db", "/data/zns.db", "-root", "./web"]
